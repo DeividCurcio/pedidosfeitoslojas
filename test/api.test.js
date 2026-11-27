@@ -189,3 +189,61 @@ test('state-changing requests reject cross-origin requests', async () => {
   });
   assert.equal(response.status, 403);
 });
+
+test('uses Render external URL as the production origin when APP_ORIGIN is unset', async () => {
+  const port = await reservePort();
+  const productionOrigin = 'https://pedidos-test.onrender.com';
+  const productionData = fs.mkdtempSync(path.join(os.tmpdir(), 'pedidos-render-test-'));
+  const productionServer = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], {
+    cwd: path.join(__dirname, '..'),
+    env: {
+      ...process.env,
+      PORT: String(port),
+      DATA_DIR: productionData,
+      NODE_ENV: 'production',
+      APP_ORIGIN: '',
+      RENDER_EXTERNAL_URL: productionOrigin,
+      TRUST_PROXY: '1'
+    },
+    stdio: 'ignore'
+  });
+
+  try {
+    const localOrigin = `http://localhost:${port}`;
+    let ready = false;
+    for (let attempt = 0; attempt < 50; attempt++) {
+      try {
+        const response = await fetch(localOrigin + '/api/health');
+        if (response.ok) {
+          ready = true;
+          break;
+        }
+      } catch (error) {
+        await wait(100);
+      }
+    }
+    assert.ok(ready, 'The production API did not become ready.');
+
+    const response = await fetch(localOrigin + '/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: productionOrigin
+      },
+      body: JSON.stringify({
+        displayName: 'Teste Render',
+        email: `render-${Date.now()}@example.test`,
+        password: 'senha-segura-123'
+      })
+    });
+    assert.equal(response.status, 201);
+    assert.match(response.headers.get('set-cookie'), /; Secure(?:;|$)/);
+  } finally {
+    if (productionServer.exitCode === null) {
+      const exited = new Promise(resolve => productionServer.once('exit', resolve));
+      productionServer.kill();
+      await exited;
+    }
+    fs.rmSync(productionData, { recursive: true, force: true });
+  }
+});

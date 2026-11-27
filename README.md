@@ -22,14 +22,17 @@ O banco é criado em `data/pedidos.sqlite`. Essa pasta é ignorada pelo Git e co
 
 As senhas são armazenadas como hashes `scrypt`; o navegador recebe um cookie de sessão `HttpOnly`. A API limita tentativas de login/cadastro/convite por endereço IP. Esta versão não envia e-mails de confirmação nem recuperação de senha.
 
-## Colocar online
+## Publicar na Render
 
-GitHub Pages não executa esta API. Publique o projeto completo em um host que execute Node.js (ou em um servidor próprio) e mantenha **uma instância** da API com disco persistente para o SQLite. Configure:
+O arquivo `render.yaml` define um serviço Node na região da Virgínia, uma verificação de saúde e um disco persistente de 1 GB para o SQLite. Para publicar:
 
-- `NODE_ENV=production`
-- `APP_ORIGIN=https://seu-dominio`
-- `PORT` conforme informado pelo host
-- `DATA_DIR` apontando para um volume persistente e privado
-- `TRUST_PROXY=1` somente se o host for um proxy confiável que define `X-Forwarded-For`
+1. Abra o [painel da Render](https://dashboard.render.com/) e escolha **New → Blueprint**.
+2. Conecte `DeividCurcio/pedidosfeitoslojas` e selecione a branch `main`.
+3. Revise o serviço e o preço no painel antes de confirmar a criação.
+4. Após o deploy, abra a URL `onrender.com` informada pela Render. Essa URL é o app completo; o GitHub Pages não executa a API Node nem persiste o SQLite.
 
-Use HTTPS, proteja o acesso ao volume de dados e mantenha backups. Não publique `data/`, `.env` ou cópias do banco. A tela de login só fica disponível quando a página é servida pela própria API.
+O plano configurado é `0.5c-512mb` (US$ 7/mês) mais disco de 1 GB (US$ 0,25/GB/mês), conforme a tabela de preços consultada em novembro de 2026. Podem existir cobranças adicionais de tráfego ou impostos; confirme o valor vigente no painel antes de provisionar.
+
+O serviço lê `RENDER_EXTERNAL_URL` para validar a origem HTTPS. `DATA_DIR=/var/data` aponta para o disco; `TRUST_PROXY=1` confia nos cabeçalhos do proxy da Render para rate limiting. O SQLite com disco persistente exige uma única instância; não habilite escala horizontal. Configure backups e nunca envie `.env` ou `data/` ao Git.
+
+Para outro host, configure `NODE_ENV=production`, `APP_ORIGIN` com a origem HTTPS exata, `PORT` conforme o provedor, `DATA_DIR` em um volume persistente e `TRUST_PROXY=1` somente atrás de um proxy confiável.

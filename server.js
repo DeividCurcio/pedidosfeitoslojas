@@ -10,7 +10,7 @@ const ROOT = __dirname;
 const PORT = Number(process.env.PORT || 3000);
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
-const APP_ORIGIN = (process.env.APP_ORIGIN || '').replace(/\/+$/, '');
+const APP_ORIGIN = (process.env.APP_ORIGIN || process.env.RENDER_EXTERNAL_URL || '').replace(/\/+$/, '');
 const COOKIE_NAME = 'pedidos_session';
 const SESSION_DAYS = 30;
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
