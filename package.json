@@ -1,0 +1,17 @@
+{
+  "name": "controle-pedidos-entregas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API própria de contas e pedidos compartilhados para Controle de Pedidos — Entregas",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.4.1"
+  }
+}

@@ -1,0 +1,1330 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>Controle de Pedidos — Entregas</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --surface: #fff;
+      --surface-soft: #f8faff;
+      --text: #172033;
+      --muted: #64708a;
+      --line: #e2e8f2;
+      --primary: #5b42d6;
+      --primary-dark: #4630b6;
+      --primary-soft: #efedff;
+      --green: #157347;
+      --red: #b42318;
+      --shadow: 0 12px 32px rgba(27, 38, 71, .07);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-synthesis: none;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 280px; background: var(--bg); color: var(--text); }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .shell { width: min(1120px, 100%); margin: 0 auto; padding: 22px 16px 48px; }
+    .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+    .brand-mark { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 44px; color: white; background: var(--primary); border-radius: 14px; font-size: 22px; }
+    h1 { margin: 0; font-size: clamp(1.25rem, 4vw, 1.8rem); line-height: 1.2; letter-spacing: -.035em; }
+    .subtitle { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
+    .voice-panel { display: grid; grid-template-columns: 1fr; gap: 18px; padding: 20px; margin-bottom: 18px; }
+    .voice-copy { display: flex; align-items: flex-start; gap: 12px; }
+    .voice-indicator { width: 12px; height: 12px; flex: 0 0 12px; margin-top: 6px; border-radius: 50%; background: #98a2b3; box-shadow: 0 0 0 5px #f0f2f6; }
+    .voice-indicator.listening { background: #e5484d; box-shadow: 0 0 0 5px #ffeded; animation: pulse 1.2s infinite; }
+    .voice-indicator.processing { background: #ed9b00; box-shadow: 0 0 0 5px #fff5dc; }
+    .voice-indicator.success { background: #22a06b; box-shadow: 0 0 0 5px #e6f7ef; }
+    .voice-indicator.error { background: #d92d20; box-shadow: 0 0 0 5px #ffeded; }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 9px rgba(229,72,77,.12); } }
+    .voice-label { margin: 0 0 3px; font-size: 1rem; font-weight: 750; }
+    .voice-hint { margin: 0; color: var(--muted); font-size: .88rem; line-height: 1.45; }
+    .speak-button { min-height: 58px; width: 100%; padding: 12px 22px; border: 0; border-radius: 16px; background: var(--primary); color: white; font-weight: 750; font-size: 1.08rem; box-shadow: 0 8px 18px rgba(91,66,214,.22); }
+    .speak-button:hover { background: var(--primary-dark); }
+    .speak-button[aria-pressed="true"] { background: #c62828; box-shadow: 0 8px 18px rgba(198,40,40,.18); }
+    .speak-button:disabled { opacity: .58; cursor: not-allowed; }
+    .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 24px 2px 12px; }
+    .section-heading h2 { margin: 0; font-size: 1.1rem; letter-spacing: -.02em; }
+    .section-heading p { margin: 4px 0 0; color: var(--muted); font-size: .83rem; }
+    .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px; }
+    .filter-control { min-height: 46px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); }
+    .filter-label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .88rem; }
+    .filter-label select { min-width: 170px; }
+    #specificDate { display: none; }
+    #specificDate.visible { display: block; }
+    .totals-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .total-box { padding: 14px 16px; background: var(--primary-soft); border: 1px solid #e4e0ff; border-radius: 16px; }
+    .total-box.general { background: #eff8f3; border-color: #daeee2; }
+    .total-caption { display: block; color: var(--muted); font-size: .78rem; font-weight: 650; }
+    .total-number { display: block; margin-top: 2px; font-size: 1.8rem; line-height: 1.2; font-weight: 800; letter-spacing: -.04em; }
+    .store-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .store-card { min-width: 0; padding: 16px; }
+    .store-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .store-name { margin: 0; font-size: 1.02rem; font-weight: 760; }
+    .store-total { color: var(--primary); text-align: right; }
+    .store-total strong { display: block; font-size: 1.55rem; line-height: 1; }
+    .store-total span { display: block; margin-top: 4px; color: var(--muted); font-size: .73rem; }
+    .last-time { min-height: 18px; margin: 12px 0; color: var(--muted); font-size: .79rem; }
+    .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .action-button, .icon-button, .secondary-button, .danger-button { min-height: 46px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); font-weight: 700; }
+    .action-button.primary { border-color: var(--primary); background: var(--primary); color: #fff; }
+    .action-button:hover, .secondary-button:hover { background: var(--surface-soft); }
+    .action-button.primary:hover { background: var(--primary-dark); }
+    .custom-row { display: flex; gap: 8px; margin-top: 8px; }
+    .custom-row input { min-width: 0; width: 100%; height: 46px; padding: 0 10px; border: 1px solid var(--line); border-radius: 12px; color: var(--text); }
+    .custom-row button { min-width: 82px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .qr-panel { margin-bottom: 20px; padding: 18px; }
+    .qr-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+    .qr-store-label { display: grid; flex: 1 1 180px; gap: 6px; color: var(--muted); font-size: .84rem; font-weight: 650; }
+    .qr-store-label select { width: 100%; }
+    .qr-button { min-height: 48px; padding: 10px 16px; border: 0; border-radius: 12px; background: var(--primary); color: white; font-weight: 750; }
+    .qr-button.stop { background: #b42318; }
+    .qr-status { min-height: 1.4em; margin: 12px 0 0; color: var(--muted); font-size: .88rem; line-height: 1.4; }
+    .camera-wrap { display: none; overflow: hidden; margin-top: 12px; border-radius: 16px; background: #10131b; }
+    .camera-wrap.visible { display: block; }
+    .camera-wrap video { display: block; width: 100%; max-height: min(58vh, 480px); object-fit: cover; }
+    [hidden] { display: none !important; }
+    .account-panel { margin-bottom: 18px; padding: 18px; }
+    .account-heading { margin: 0 0 6px; font-size: 1.05rem; }
+    .account-status { margin: 0 0 12px; color: var(--muted); font-size: .86rem; line-height: 1.45; }
+    .auth-grid { display: grid; gap: 14px; }
+    .auth-form { display: grid; gap: 9px; align-content: start; }
+    .auth-form h3 { margin: 0 0 2px; font-size: .95rem; }
+    .auth-form label { display: grid; gap: 5px; color: var(--muted); font-size: .82rem; font-weight: 650; }
+    .auth-form input { width: 100%; min-width: 0; min-height: 46px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); color: var(--text); }
+    .auth-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+    .auth-primary { min-height: 46px; padding: 9px 14px; border: 0; border-radius: 12px; background: var(--primary); color: white; font-weight: 750; }
+    .account-workspace { display: grid; gap: 12px; }
+    .team-tools { display: grid; gap: 12px; }
+    .team-code { display: inline-block; padding: 7px 10px; border: 1px dashed #9b8cff; border-radius: 9px; color: var(--primary-dark); background: var(--primary-soft); font-size: 1.12rem; font-weight: 850; letter-spacing: .12em; }
+    .member-list { display: flex; flex-wrap: wrap; gap: 7px; padding: 0; margin: 7px 0 0; list-style: none; }
+    .member-list li { padding: 6px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: .78rem; }
+    .member-list li.online { border-color: #b7e2ca; color: var(--green); background: #eff8f3; }
+    .account-summary { margin: 0; color: var(--muted); font-size: .86rem; }
+    .account-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .offline-notice { margin: 0; padding: 10px 12px; border-radius: 12px; color: #7a4d00; background: #fff5dc; font-size: .84rem; line-height: 1.4; }
+    .report-panel { overflow: hidden; }
+    .report-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+    .report-toolbar p { margin: 0; color: var(--muted); font-size: .85rem; }
+    .toolbar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .secondary-button, .danger-button { min-height: 44px; }
+    .danger-button { border-color: #f2d3d0; color: var(--red); }
+    .launch-list { list-style: none; padding: 0; margin: 0; }
+    .launch-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--line); }
+    .launch-item:last-child { border-bottom: 0; }
+    .launch-store { margin: 0; font-weight: 750; }
+    .launch-meta { margin: 4px 0 0; color: var(--muted); font-size: .78rem; line-height: 1.4; overflow-wrap: anywhere; }
+    .launch-qty { padding: 6px 9px; color: var(--primary-dark); background: var(--primary-soft); border-radius: 10px; font-weight: 800; white-space: nowrap; }
+    .launch-trailing { display: flex; align-items: center; gap: 7px; }
+    .delete-button { min-width: 44px; min-height: 44px; border: 1px solid var(--line); border-radius: 12px; background: white; color: var(--red); font-size: 1.05rem; }
+    .empty-state { padding: 28px 16px; color: var(--muted); text-align: center; font-size: .9rem; }
+    .toast { position: fixed; z-index: 10; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); width: min(92vw, 440px); padding: 13px 16px; transform: translate(-50%, 18px); opacity: 0; pointer-events: none; color: white; background: #20283a; border-radius: 14px; box-shadow: var(--shadow); transition: opacity .18s, transform .18s; font-size: .9rem; }
+    .toast.visible { transform: translate(-50%, 0); opacity: 1; }
+    .print-report { display: none; }
+    :focus-visible { outline: 3px solid #8d7cff; outline-offset: 2px; }
+    @media (min-width: 620px) {
+      .shell { padding: 30px 24px 56px; }
+      .voice-panel { grid-template-columns: 1fr auto; align-items: center; padding: 22px 24px; }
+      .speak-button { width: auto; min-width: 180px; }
+      .store-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .totals-strip { grid-template-columns: 1fr 1fr; }
+      .auth-grid, .team-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (min-width: 920px) { .store-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media print {
+      @page { margin: 14mm; }
+      body { min-width: 0; background: white; color: #111; font-size: 10pt; }
+      .shell, .toast { display: none !important; }
+      .print-report { display: block !important; }
+      .print-report h1 { margin-bottom: 4px; font-size: 20pt; }
+      .print-meta { margin: 0 0 16px; color: #444; }
+      .print-report h2 { margin: 18px 0 8px; font-size: 13pt; }
+      .print-report table { width: 100%; border-collapse: collapse; }
+      .print-report th, .print-report td { padding: 6px 8px; border: 1px solid #bbb; text-align: left; }
+      .print-report th { background: #f0f0f0 !important; print-color-adjust: exact; }
+      .print-report tfoot { font-weight: bold; }
+      .print-report tr { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">📦</div>
+      <div>
+        <h1>Controle de Pedidos — Entregas</h1>
+        <p class="subtitle">Anote cada pedido por voz ou manualmente.</p>
+      </div>
+    </header>
+
+    <section class="panel account-panel" aria-labelledby="accountTitle">
+      <h2 id="accountTitle" class="account-heading">Conta e equipe</h2>
+      <p id="apiStatus" class="account-status" role="status" aria-live="polite">Verificando a API da equipe…</p>
+      <p class="account-status">Pedidos lançados numa equipe são enviados ao servidor e ficam visíveis para seus membros.</p>
+      <p id="accountNotice" class="offline-notice" hidden></p>
+      <button id="exportLocalButton" class="secondary-button" type="button" hidden>Exportar registros locais</button>
+      <div id="authForms">
+        <div class="auth-grid">
+          <form id="loginForm" class="auth-form">
+            <h3>Entrar</h3>
+            <label for="loginEmail">E-mail<input id="loginEmail" type="email" autocomplete="username" required maxlength="254"></label>
+            <label for="loginPassword">Senha<input id="loginPassword" type="password" autocomplete="current-password" required minlength="10" maxlength="128"></label>
+            <div class="auth-actions"><button class="auth-primary" type="submit">Entrar na conta</button><button id="showRegister" class="secondary-button" type="button">Criar conta</button></div>
+          </form>
+          <form id="registerForm" class="auth-form" hidden>
+            <h3>Criar conta</h3>
+            <label for="registerName">Seu nome<input id="registerName" type="text" autocomplete="name" required minlength="2" maxlength="60"></label>
+            <label for="registerEmail">E-mail<input id="registerEmail" type="email" autocomplete="email" required maxlength="254"></label>
+            <label for="registerPassword">Senha (mínimo 10 caracteres)<input id="registerPassword" type="password" autocomplete="new-password" required minlength="10" maxlength="128"></label>
+            <div class="auth-actions"><button class="auth-primary" type="submit">Criar conta</button><button id="cancelRegister" class="secondary-button" type="button">Voltar</button></div>
+          </form>
+        </div>
+      </div>
+      <div id="accountWorkspace" class="account-workspace" hidden>
+        <p id="accountIdentity" class="account-summary"></p>
+        <div id="teamChoice" class="team-tools" hidden>
+          <form id="createTeamForm" class="auth-form">
+            <h3>Criar uma equipe</h3>
+            <label for="teamName">Nome da equipe<input id="teamName" type="text" maxlength="60" placeholder="Equipe de empacotamento"></label>
+            <button class="auth-primary" type="submit">Criar equipe</button>
+          </form>
+          <form id="joinTeamForm" class="auth-form">
+            <h3>Entrar em uma equipe</h3>
+            <label for="teamCodeInput">Código de 6 caracteres<input id="teamCodeInput" type="text" inputmode="text" autocomplete="off" maxlength="6" pattern="[A-HJ-NP-Z2-9]{6}" aria-describedby="teamCodeHelp" required></label>
+            <span id="teamCodeHelp" class="account-status">Peça o código a quem criou a equipe.</span>
+            <button class="auth-primary" type="submit">Entrar na equipe</button>
+          </form>
+        </div>
+        <div id="teamInfo" hidden>
+          <p class="account-summary"><strong id="teamNameLabel"></strong> · Código de convite <span id="teamCodeLabel" class="team-code"></span></p>
+          <p id="presenceLabel" class="account-summary"></p>
+          <ul id="memberList" class="member-list" aria-label="Pessoas da equipe"></ul>
+        </div>
+        <div class="account-actions">
+          <button id="importLocalButton" class="secondary-button" type="button" hidden>Importar registros deste aparelho</button>
+          <label id="backupImportLabel" class="secondary-button" for="localBackupFile" hidden>Importar backup JSON</label>
+          <input id="localBackupFile" type="file" accept="application/json,.json" hidden>
+          <button id="logoutButton" class="secondary-button" type="button">Sair da conta</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel voice-panel" aria-labelledby="voiceTitle">
+      <div class="voice-copy">
+        <span id="voiceIndicator" class="voice-indicator" aria-hidden="true"></span>
+        <div>
+          <h2 id="voiceTitle" class="voice-label">Pronto para anotar</h2>
+          <p id="voiceStatus" class="voice-hint" role="status" aria-live="polite">Toque em Falar e diga, por exemplo: “Shopee 3”.</p>
+        </div>
+      </div>
+      <button id="speakButton" class="speak-button" type="button" aria-pressed="false">🎙️ Falar</button>
+    </section>
+
+    <section class="panel qr-panel" aria-labelledby="qrTitle">
+      <div class="section-heading" style="margin:0 0 12px">
+        <div><h2 id="qrTitle">Bipar pedido com QR Code</h2><p>Leia o código do pedido para adicionar +1 à loja escolhida.</p></div>
+      </div>
+      <div class="qr-controls">
+        <label class="qr-store-label" for="qrStore">Loja deste pedido
+          <select id="qrStore" class="filter-control">
+            <option value="Shopee">Shopee</option>
+            <option value="Shein">Shein</option>
+            <option value="Mercado Livre">Mercado Livre</option>
+            <option value="Kwai">Kwai</option>
+            <option value="TikTok">TikTok</option>
+            <option value="Tik Tok J&amp;T">Tik Tok J&amp;T</option>
+          </select>
+        </label>
+        <button id="qrToggle" class="qr-button" type="button" aria-pressed="false">▦ Abrir leitor QR</button>
+      </div>
+      <p id="qrStatus" class="qr-status" role="status" aria-live="polite">Escolha a loja e abra a câmera. Cada QR reconhecido registra um pedido.</p>
+      <div id="cameraWrap" class="camera-wrap">
+        <video id="qrVideo" playsinline muted aria-label="Imagem ao vivo da câmera para ler QR Codes"></video>
+      </div>
+    </section>
+
+    <section aria-labelledby="filterTitle">
+      <div class="section-heading">
+        <div><h2 id="filterTitle">Resumo por período</h2><p id="periodLabel">Totais de hoje</p></div>
+      </div>
+      <div class="panel filter-row">
+        <label class="filter-label" for="periodFilter">Mostrar
+          <select id="periodFilter" class="filter-control">
+            <option value="today">Hoje</option>
+            <option value="yesterday">Ontem</option>
+            <option value="week">Esta semana</option>
+            <option value="all">Todas as datas</option>
+            <option value="date">Data específica</option>
+          </select>
+        </label>
+        <label class="filter-label" for="specificDate">Data
+          <input id="specificDate" class="filter-control" type="date" aria-label="Escolher data específica">
+        </label>
+      </div>
+      <div class="totals-strip" aria-label="Totais de pedidos">
+        <div class="total-box"><span class="total-caption">No período selecionado</span><strong id="filteredTotal" class="total-number">0</strong></div>
+        <div class="total-box general"><span class="total-caption">Total geral · todos os tempos</span><strong id="allTimeTotal" class="total-number">0</strong></div>
+      </div>
+      <div id="storeGrid" class="store-grid" aria-label="Totais por loja"></div>
+    </section>
+
+    <section aria-labelledby="launchTitle">
+      <div class="section-heading">
+        <div><h2 id="launchTitle">Lançamentos</h2><p id="launchCount">0 registros neste período</p></div>
+      </div>
+      <div class="panel report-panel">
+        <div class="report-toolbar">
+          <p>Mais recentes primeiro</p>
+          <div class="toolbar-actions">
+            <button id="undoButton" class="danger-button" type="button">↶ Desfazer último</button>
+            <button id="pdfButton" class="secondary-button" type="button">Baixar PDF</button>
+            <button id="printButton" class="secondary-button" type="button">Imprimir</button>
+          </div>
+        </div>
+        <ul id="launchList" class="launch-list" aria-label="Lista de lançamentos"></ul>
+        <div id="emptyState" class="empty-state" hidden>Nenhum lançamento para este período.</div>
+      </div>
+    </section>
+    <p id="dataModeFooter" class="subtitle" style="margin:16px 2px 0">Seus registros locais ficam somente neste aparelho.</p>
+  </main>
+
+  <section id="printReport" class="print-report" aria-label="Relatório de pedidos para impressão"></section>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    'use strict';
+    const STORES = ['Shopee', 'Shein', 'Mercado Livre', 'Kwai', 'TikTok', 'Tik Tok J&T'];
+    const STORAGE_KEY = 'controle-pedidos-entregas-v1';
+    const recognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const storeGrid = document.getElementById('storeGrid');
+    const launchList = document.getElementById('launchList');
+    const voiceTitle = document.getElementById('voiceTitle');
+    const voiceStatus = document.getElementById('voiceStatus');
+    const voiceIndicator = document.getElementById('voiceIndicator');
+    const speakButton = document.getElementById('speakButton');
+    const periodFilter = document.getElementById('periodFilter');
+    const specificDate = document.getElementById('specificDate');
+    const toast = document.getElementById('toast');
+    let launches = loadLaunches();
+    let currentUser = null;
+    let currentTeam = null;
+    let teamMembers = [];
+    let remoteMode = false;
+    let apiEnabled = false;
+    let teamEvents = null;
+    let recognition = null;
+    let isListening = false;
+    let toastTimer;
+    let qrStream = null;
+    let qrDetector = null;
+    let qrFrame = null;
+    let qrActive = false;
+    let qrStarting = false;
+    let lastQrValue = '';
+    let lastQrDetectedAt = 0;
+
+    function loadLaunches() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) throw new Error('Formato inválido');
+        return parsed.filter(item => item && typeof item.id === 'string' && STORES.includes(item.store) &&
+          Number.isInteger(item.quantity) && item.quantity >= 1 && item.quantity <= 999 &&
+          typeof item.createdAt === 'string' && Number.isFinite(Date.parse(item.createdAt)) &&
+          (item.origin === 'voz' || item.origin === 'manual' || item.origin === 'qr'));
+      } catch (error) {
+        setTimeout(() => showToast('Não foi possível ler os dados salvos. Os novos registros poderão ser gravados normalmente.'), 0);
+        return [];
+      }
+    }
+
+    async function apiRequest(path, options) {
+      const request = options || {};
+      const headers = {};
+      const init = { method: request.method || 'GET', credentials: 'same-origin', headers };
+      if (request.body !== undefined) {
+        headers['Content-Type'] = 'application/json';
+        init.body = JSON.stringify(request.body);
+      }
+      const response = await fetch(path, init);
+      let payload;
+      try {
+        payload = await response.json();
+      } catch (error) {
+        throw new Error('A API retornou uma resposta inválida.');
+      }
+      if (!response.ok) {
+        const apiError = new Error(payload.error || 'Não foi possível concluir a operação.');
+        apiError.status = response.status;
+        throw apiError;
+      }
+      return payload;
+    }
+
+    function setApiStatus(message) {
+      document.getElementById('apiStatus').textContent = message;
+    }
+
+    function migrationStorageKey() {
+      return currentTeam ? 'controle-pedidos-migration-' + currentTeam.id : '';
+    }
+
+    function hasPendingLocalImport() {
+      if (!currentTeam) return false;
+      try {
+        return loadLaunches().length > 0 && !localStorage.getItem(migrationStorageKey() + '-done');
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function renderAccount() {
+      const authForms = document.getElementById('authForms');
+      const workspace = document.getElementById('accountWorkspace');
+      const teamChoice = document.getElementById('teamChoice');
+      const teamInfo = document.getElementById('teamInfo');
+      const notice = document.getElementById('accountNotice');
+      authForms.hidden = !apiEnabled || Boolean(currentUser);
+      workspace.hidden = !apiEnabled || !currentUser;
+      notice.hidden = !notice.textContent;
+      const localItems = loadLaunches();
+      document.getElementById('exportLocalButton').hidden = location.protocol !== 'file:' || localItems.length === 0;
+      document.getElementById('accountIdentity').textContent = currentUser
+        ? 'Conectado como ' + currentUser.displayName + ' · ' + currentUser.email
+        : '';
+      teamChoice.hidden = Boolean(currentTeam);
+      teamInfo.hidden = !currentTeam;
+      const importButton = document.getElementById('importLocalButton');
+      importButton.hidden = !hasPendingLocalImport();
+      if (importButton.hidden === false) {
+        importButton.textContent = 'Importar ' + localItems.length + ' registro(s) deste aparelho';
+      }
+      document.getElementById('backupImportLabel').hidden = !currentTeam;
+      if (currentTeam) {
+        document.getElementById('teamNameLabel').textContent = currentTeam.name;
+        document.getElementById('teamCodeLabel').textContent = currentTeam.code;
+      }
+      const onlineCount = teamMembers.filter(member => member.online).length;
+      document.getElementById('presenceLabel').textContent = teamMembers.length + ' pessoa(s) na equipe · ' + onlineCount + ' online agora';
+      const memberList = document.getElementById('memberList');
+      memberList.replaceChildren();
+      teamMembers.forEach(member => {
+        const item = document.createElement('li');
+        item.className = member.online ? 'online' : '';
+        item.textContent = member.displayName + (member.id === (currentUser && currentUser.id) ? ' (você)' : '') + ' · ' + (member.online ? 'online' : 'offline');
+        memberList.appendChild(item);
+      });
+      document.getElementById('dataModeFooter').textContent = remoteMode
+        ? 'Pedidos sincronizados com a equipe neste servidor.'
+        : 'Seus registros locais ficam somente neste aparelho.';
+    }
+
+    function applyTeamSnapshot(snapshot) {
+      if (!snapshot || !Array.isArray(snapshot.orders)) return;
+      currentTeam = Object.assign({}, currentTeam || {}, snapshot.team || {});
+      teamMembers = Array.isArray(snapshot.members) ? snapshot.members : [];
+      launches = snapshot.orders;
+      remoteMode = Boolean(currentUser && currentTeam);
+      renderAccount();
+      render();
+    }
+
+    function openTeamEvents() {
+      if (teamEvents) teamEvents.close();
+      if (!remoteMode) return;
+      teamEvents = new EventSource('/api/events');
+      teamEvents.addEventListener('snapshot', event => {
+        try {
+          applyTeamSnapshot(JSON.parse(event.data));
+          setApiStatus('Sincronização ao vivo conectada.');
+        } catch (error) {
+          setApiStatus('Chegou uma atualização inválida do servidor. Recarregue o app.');
+        }
+      });
+      teamEvents.onopen = () => setApiStatus('Sincronização ao vivo conectada.');
+      teamEvents.onerror = () => setApiStatus('Conexão ao vivo interrompida; tentando reconectar…');
+    }
+
+    async function refreshTeamSnapshot() {
+      if (!remoteMode) return;
+      applyTeamSnapshot(await apiRequest('/api/team'));
+    }
+
+    async function initializeAccount() {
+      if (location.protocol === 'file:') {
+        apiEnabled = false;
+        setApiStatus('Para contas compartilhadas, abra o app pelo servidor da API.');
+        document.getElementById('accountNotice').textContent = 'Este arquivo aberto diretamente funciona no modo local. Rode `npm start` e abra http://localhost:3000 para entrar ou criar uma equipe. Exporte seus registros abaixo antes de mudar de endereço para poder importá-los na equipe.';
+        renderAccount();
+        return;
+      }
+      try {
+        await apiRequest('/api/health');
+        apiEnabled = true;
+        setApiStatus('API conectada. Entre ou crie sua conta para sincronizar pedidos.');
+        renderAccount();
+        try {
+          const result = await apiRequest('/api/me');
+          currentUser = result.user;
+          currentTeam = result.team;
+          if (currentTeam) {
+            remoteMode = true;
+            await refreshTeamSnapshot();
+            openTeamEvents();
+          } else {
+            launches = loadLaunches();
+            render();
+          }
+          renderAccount();
+          setApiStatus(currentTeam ? 'Conectado à equipe.' : 'Conta conectada. Crie ou entre em uma equipe.');
+        } catch (error) {
+          if (error.status !== 401) throw error;
+          setApiStatus('API pronta. Entre ou crie uma conta para começar.');
+        }
+      } catch (error) {
+        apiEnabled = false;
+        setApiStatus('Não foi possível conectar à API.');
+        document.getElementById('accountNotice').textContent = error.message + ' Confira se o servidor está iniciado e se você abriu o endereço correto.';
+        renderAccount();
+      }
+    }
+
+    async function connectAccount(result) {
+      currentUser = result.user;
+      currentTeam = result.team;
+      teamMembers = [];
+      remoteMode = Boolean(currentTeam);
+      if (teamEvents) teamEvents.close();
+      teamEvents = null;
+      if (remoteMode) {
+        await refreshTeamSnapshot();
+        openTeamEvents();
+      } else {
+        launches = loadLaunches();
+        render();
+      }
+      renderAccount();
+      setApiStatus(currentTeam ? 'Conectado à equipe.' : 'Conta conectada. Crie ou entre em uma equipe.');
+    }
+
+    async function importOrderItems(items, migrationId, markLocalDone) {
+      if (!currentTeam) return;
+      if (!items.length) {
+        showToast('Não há registros locais para importar.');
+        renderAccount();
+        return;
+      }
+      const key = migrationStorageKey();
+      try {
+        const result = await apiRequest('/api/orders/import', {
+          method: 'POST',
+          body: { migrationId, items: items.map(item => ({ store: item.store, quantity: item.quantity, createdAt: item.createdAt, origin: item.origin })) }
+        });
+        if (markLocalDone) localStorage.setItem(key + '-done', 'true');
+        await refreshTeamSnapshot();
+        renderAccount();
+        showToast(result.alreadyImported ? 'Esses registros já tinham sido importados.' : result.imported + ' registro(s) importado(s) para a equipe.');
+      } catch (error) {
+        showToast('A importação não terminou: ' + error.message);
+      }
+    }
+
+    async function importLocalOrders() {
+      if (!currentTeam) return;
+      const items = loadLaunches();
+      if (!items.length) {
+        renderAccount();
+        return;
+      }
+      const key = migrationStorageKey();
+      let migrationId = localStorage.getItem(key);
+      if (!migrationId) {
+        migrationId = makeId();
+        localStorage.setItem(key, migrationId);
+      }
+      await importOrderItems(items, migrationId, true);
+    }
+
+    document.getElementById('exportLocalButton').addEventListener('click', () => {
+      const backup = {
+        format: 'controle-pedidos-backup-v1',
+        backupId: makeId(),
+        exportedAt: new Date().toISOString(),
+        launches: loadLaunches()
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      const objectUrl = URL.createObjectURL(blob);
+      link.href = objectUrl;
+      link.download = 'controle-pedidos-backup.json';
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      showToast('Backup baixado neste aparelho. Importe-o na equipe depois de entrar no servidor.');
+    });
+
+    document.getElementById('localBackupFile').addEventListener('change', async event => {
+      const input = event.currentTarget;
+      const file = input.files && input.files[0];
+      if (!file || !currentTeam) return;
+      try {
+        const backup = JSON.parse(await file.text());
+        if (backup.format !== 'controle-pedidos-backup-v1' || !Array.isArray(backup.launches) ||
+          backup.launches.length > 10_000 ||
+          !backup.launches.every(item => item && STORES.includes(item.store) &&
+            Number.isInteger(item.quantity) && item.quantity >= 1 && item.quantity <= 999 &&
+            (item.origin === 'voz' || item.origin === 'manual' || item.origin === 'qr') &&
+            typeof item.createdAt === 'string' && Number.isFinite(Date.parse(item.createdAt)))) {
+          throw new Error('O arquivo não é um backup válido deste app.');
+        }
+        const migrationId = String(backup.backupId || makeId()) + '-' + currentTeam.id;
+        await importOrderItems(backup.launches, migrationId);
+      } catch (error) {
+        showToast('Não foi possível importar o backup: ' + error.message);
+      } finally {
+        input.value = '';
+      }
+    });
+
+    async function submitAuth(path, body) {
+      try {
+        await connectAccount(await apiRequest(path, { method: 'POST', body }));
+        showToast(currentTeam ? 'Você entrou na equipe.' : 'Conta conectada.');
+        document.getElementById('loginForm').reset();
+        document.getElementById('registerForm').reset();
+        document.getElementById('registerForm').hidden = true;
+        document.getElementById('showRegister').hidden = false;
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    document.getElementById('showRegister').addEventListener('click', () => {
+      document.getElementById('registerForm').hidden = false;
+      document.getElementById('showRegister').hidden = true;
+    });
+    document.getElementById('cancelRegister').addEventListener('click', () => {
+      document.getElementById('registerForm').hidden = true;
+      document.getElementById('showRegister').hidden = false;
+    });
+    document.getElementById('teamCodeInput').addEventListener('input', event => {
+      event.currentTarget.value = event.currentTarget.value.toUpperCase();
+    });
+    document.getElementById('loginForm').addEventListener('submit', event => {
+      event.preventDefault();
+      void submitAuth('/api/auth/login', {
+        email: document.getElementById('loginEmail').value,
+        password: document.getElementById('loginPassword').value
+      });
+    });
+    document.getElementById('registerForm').addEventListener('submit', event => {
+      event.preventDefault();
+      void submitAuth('/api/auth/register', {
+        displayName: document.getElementById('registerName').value,
+        email: document.getElementById('registerEmail').value,
+        password: document.getElementById('registerPassword').value
+      });
+    });
+    document.getElementById('createTeamForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = event.currentTarget.querySelector('button[type="submit"]');
+      button.disabled = true;
+      try {
+        const result = await apiRequest('/api/teams', {
+          method: 'POST',
+          body: { name: document.getElementById('teamName').value }
+        });
+        currentTeam = result.team;
+        remoteMode = true;
+        applyTeamSnapshot(result.snapshot);
+        openTeamEvents();
+        document.getElementById('teamName').value = '';
+        await importLocalOrders();
+      } catch (error) {
+        showToast(error.message);
+      } finally {
+        button.disabled = false;
+      }
+    });
+    document.getElementById('joinTeamForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = event.currentTarget.querySelector('button[type="submit"]');
+      button.disabled = true;
+      try {
+        const result = await apiRequest('/api/teams/join', {
+          method: 'POST',
+          body: { code: document.getElementById('teamCodeInput').value }
+        });
+        currentTeam = result.team;
+        remoteMode = true;
+        applyTeamSnapshot(result.snapshot);
+        openTeamEvents();
+        document.getElementById('teamCodeInput').value = '';
+        showToast('Você entrou na equipe.');
+      } catch (error) {
+        showToast(error.message);
+      } finally {
+        button.disabled = false;
+      }
+    });
+    document.getElementById('importLocalButton').addEventListener('click', () => { void importLocalOrders(); });
+    document.getElementById('logoutButton').addEventListener('click', async () => {
+      try {
+        if (teamEvents) teamEvents.close();
+        teamEvents = null;
+        await apiRequest('/api/auth/logout', { method: 'POST', body: {} });
+        currentUser = null;
+        currentTeam = null;
+        teamMembers = [];
+        remoteMode = false;
+        launches = loadLaunches();
+        renderAccount();
+        render();
+        setApiStatus('Você saiu. Os registros locais continuam neste aparelho.');
+      } catch (error) {
+        showToast('Não foi possível sair da conta: ' + error.message);
+      }
+    });
+
+    function persistLaunch(item) {
+      launches.push(item);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(launches));
+      } catch (error) {
+        launches.pop();
+        showToast('Não foi possível salvar. Verifique o espaço disponível no aparelho.');
+        return false;
+      }
+      render();
+      return true;
+    }
+
+    function makeId() {
+      return window.crypto && typeof window.crypto.randomUUID === 'function'
+        ? window.crypto.randomUUID()
+        : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+    }
+
+    function localDateKey(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return year + '-' + month + '-' + day;
+    }
+
+    function formatDateTime(value) {
+      const date = new Date(value);
+      return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(date);
+    }
+
+    function formatTime(value) {
+      return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value));
+    }
+
+    function getPeriod() {
+      const now = new Date();
+      const selected = periodFilter.value;
+      if (selected === 'all') return { label: 'Todas as datas', matches: () => true };
+      if (selected === 'date') {
+        const key = specificDate.value;
+        if (!key) return { label: 'Escolha uma data', matches: () => false };
+        return { label: 'Data: ' + new Intl.DateTimeFormat('pt-BR').format(new Date(key + 'T12:00:00')), matches: item => localDateKey(new Date(item.createdAt)) === key };
+      }
+      if (selected === 'yesterday') {
+        const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        const key = localDateKey(yesterday);
+        return { label: 'Ontem · ' + new Intl.DateTimeFormat('pt-BR').format(yesterday), matches: item => localDateKey(new Date(item.createdAt)) === key };
+      }
+      if (selected === 'week') {
+        const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+        const nextMonday = new Date(monday);
+        nextMonday.setDate(monday.getDate() + 7);
+        return { label: 'Esta semana · desde ' + new Intl.DateTimeFormat('pt-BR').format(monday), matches: item => {
+          const date = new Date(item.createdAt);
+          return date >= monday && date < nextMonday;
+        } };
+      }
+      const key = localDateKey(now);
+      return { label: 'Hoje · ' + new Intl.DateTimeFormat('pt-BR').format(now), matches: item => localDateKey(new Date(item.createdAt)) === key };
+    }
+
+    function getFilteredLaunches() {
+      const period = getPeriod();
+      return launches.filter(period.matches).slice().sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    }
+
+    function renderStores(filtered) {
+      const totals = Object.fromEntries(STORES.map(store => [store, 0]));
+      const latest = {};
+      filtered.forEach(item => {
+        totals[item.store] += item.quantity;
+        if (!latest[item.store] || Date.parse(item.createdAt) > Date.parse(latest[item.store])) latest[item.store] = item.createdAt;
+      });
+      storeGrid.replaceChildren();
+      STORES.forEach((store, index) => {
+        const card = document.createElement('article');
+        card.className = 'panel store-card';
+        card.innerHTML = '<div class="store-top"><h3 class="store-name"></h3><div class="store-total"><strong></strong><span>no período</span></div></div>' +
+          '<p class="last-time"></p><div class="quick-actions"><button class="action-button primary" type="button" data-add="1">+1 pedido</button><button class="action-button" type="button" data-add="5">+5 pedidos</button></div>' +
+          '<form class="custom-row"><label class="sr-only" for="custom-' + index + '">Quantidade para ' + store + '</label><input id="custom-' + index + '" type="number" min="1" max="999" step="1" inputmode="numeric" placeholder="Qtd. (1–999)" aria-label="Quantidade personalizada para ' + store + '"><button class="action-button" type="submit">Adicionar</button></form>';
+        card.querySelector('.store-name').textContent = store;
+        card.querySelector('.store-total strong').textContent = totals[store];
+        card.querySelector('.last-time').textContent = latest[store] ? 'Último no período: ' + formatTime(latest[store]) : 'Sem pedidos no período';
+        card.querySelectorAll('[data-add]').forEach(button => button.addEventListener('click', () => addLaunch(store, Number(button.dataset.add), 'manual')));
+        card.querySelector('form').addEventListener('submit', event => {
+          event.preventDefault();
+          const input = card.querySelector('input');
+          const quantity = Number(input.value);
+          if (!Number.isInteger(quantity) || quantity < 1 || quantity > 999) {
+            showToast('Digite uma quantidade inteira entre 1 e 999.');
+            input.focus();
+            return;
+          }
+          addLaunch(store, quantity, 'manual').then(added => {
+            if (added) input.value = '';
+          });
+        });
+        storeGrid.appendChild(card);
+      });
+    }
+
+    function renderLaunches(filtered) {
+      launchList.replaceChildren();
+      document.getElementById('emptyState').hidden = filtered.length !== 0;
+      document.getElementById('launchCount').textContent = filtered.length + (filtered.length === 1 ? ' registro neste período' : ' registros neste período');
+      filtered.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'launch-item';
+        const details = document.createElement('div');
+        const store = document.createElement('p');
+        store.className = 'launch-store';
+        store.textContent = item.store;
+        const meta = document.createElement('p');
+        meta.className = 'launch-meta';
+        meta.textContent = formatDateTime(item.createdAt) + ' · ' + (item.origin === 'voz' ? 'Voz' : item.origin === 'qr' ? 'QR Code' : 'Manual') +
+          (item.userName ? ' · por ' + item.userName : '');
+        details.append(store, meta);
+        const trailing = document.createElement('div');
+        trailing.className = 'launch-trailing';
+        const quantity = document.createElement('span');
+        quantity.className = 'launch-qty';
+        quantity.textContent = '+' + item.quantity;
+        const remove = document.createElement('button');
+        remove.className = 'delete-button';
+        remove.type = 'button';
+        remove.setAttribute('aria-label', 'Excluir lançamento de ' + item.store + ', quantidade ' + item.quantity + ', ' + formatDateTime(item.createdAt));
+        remove.title = 'Excluir lançamento';
+        remove.textContent = '×';
+        remove.addEventListener('click', () => deleteLaunch(item.id));
+        trailing.append(quantity, remove);
+        li.append(details, trailing);
+        launchList.appendChild(li);
+      });
+    }
+
+    function renderPrintReport(filtered) {
+      const period = getPeriod();
+      const totals = Object.fromEntries(STORES.map(store => [store, 0]));
+      filtered.forEach(item => { totals[item.store] += item.quantity; });
+      const total = Object.values(totals).reduce((sum, quantity) => sum + quantity, 0);
+      const report = document.getElementById('printReport');
+      report.replaceChildren();
+      const title = document.createElement('h1');
+      title.textContent = 'Controle de Pedidos — Entregas';
+      const meta = document.createElement('p');
+      meta.className = 'print-meta';
+      meta.textContent = 'Período: ' + period.label + ' | Gerado em: ' + formatDateTime(new Date().toISOString());
+      report.append(title, meta);
+      const totalsHeading = document.createElement('h2');
+      totalsHeading.textContent = 'Totais por loja';
+      report.appendChild(totalsHeading);
+      const totalsTable = document.createElement('table');
+      totalsTable.innerHTML = '<thead><tr><th>Loja</th><th>Pedidos</th></tr></thead>';
+      const totalsBody = document.createElement('tbody');
+      STORES.forEach(store => {
+        const row = totalsBody.insertRow();
+        row.insertCell().textContent = store;
+        row.insertCell().textContent = String(totals[store]);
+      });
+      totalsTable.appendChild(totalsBody);
+      const foot = totalsTable.createTFoot().insertRow();
+      foot.insertCell().textContent = 'Total geral de pedidos';
+      foot.insertCell().textContent = String(total);
+      report.appendChild(totalsTable);
+      const detailHeading = document.createElement('h2');
+      detailHeading.textContent = 'Lançamentos detalhados';
+      report.appendChild(detailHeading);
+      const detailTable = document.createElement('table');
+      detailTable.innerHTML = '<thead><tr><th>Loja</th><th>Quantidade</th><th>Data</th><th>Hora</th><th>Quem lançou</th></tr></thead>';
+      const body = document.createElement('tbody');
+      filtered.forEach(item => {
+        const date = new Date(item.createdAt);
+        const row = body.insertRow();
+        row.insertCell().textContent = item.store;
+        row.insertCell().textContent = String(item.quantity);
+        row.insertCell().textContent = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+        row.insertCell().textContent = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(date);
+        row.insertCell().textContent = item.userName || '—';
+      });
+      if (!filtered.length) {
+        const row = body.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 5;
+        cell.textContent = 'Nenhum lançamento neste período.';
+      }
+      detailTable.appendChild(body);
+      report.appendChild(detailTable);
+    }
+
+    function render() {
+      const filtered = getFilteredLaunches();
+      const totalFiltered = filtered.reduce((sum, item) => sum + item.quantity, 0);
+      const totalAll = launches.reduce((sum, item) => sum + item.quantity, 0);
+      document.getElementById('filteredTotal').textContent = totalFiltered;
+      document.getElementById('allTimeTotal').textContent = totalAll;
+      document.getElementById('periodLabel').textContent = getPeriod().label;
+      renderStores(filtered);
+      renderLaunches(filtered);
+      renderPrintReport(filtered);
+      document.getElementById('undoButton').disabled = launches.length === 0;
+    }
+
+    async function addLaunch(store, quantity, origin) {
+      if (!STORES.includes(store) || !Number.isInteger(quantity) || quantity < 1 || quantity > 999) {
+        showToast('Não foi possível registrar: confira loja e quantidade (1 a 999).');
+        return false;
+      }
+      let item = { id: makeId(), store, quantity, createdAt: new Date().toISOString(), origin };
+      if (remoteMode) {
+        try {
+          const result = await apiRequest('/api/orders', { method: 'POST', body: { store, quantity, origin } });
+          item = result.order;
+          if (!launches.some(entry => entry.id === item.id)) {
+            launches.unshift(item);
+            launches.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+            render();
+          }
+        } catch (error) {
+          showToast('Pedido não sincronizado: ' + error.message);
+          return false;
+        }
+      } else if (!persistLaunch(item)) {
+        return false;
+      }
+      if (origin === 'voz') {
+        const total = launches.filter(entry => entry.store === store).reduce((sum, entry) => sum + entry.quantity, 0);
+        setVoiceStatus('success', 'Pedido registrado', store + ', +' + quantity + '. Total ' + total + '.');
+        speak(store + ', mais ' + quantity + '. Total ' + total + '.');
+      } else {
+        showToast('+' + quantity + ' para ' + store + ' registrado.');
+      }
+      return true;
+    }
+
+    async function deleteLaunch(id) {
+      const item = launches.find(entry => entry.id === id);
+      if (!item) return;
+      if (!window.confirm('Excluir este lançamento de ' + item.store + ' (+ ' + item.quantity + ')?')) return;
+      if (remoteMode) {
+        try {
+          await apiRequest('/api/orders/' + encodeURIComponent(id), { method: 'DELETE' });
+          launches = launches.filter(entry => entry.id !== id);
+          render();
+          showToast('Lançamento excluído da equipe.');
+        } catch (error) {
+          showToast('Não foi possível excluir: ' + error.message);
+        }
+        return;
+      }
+      const previous = launches;
+      launches = launches.filter(entry => entry.id !== id);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(launches)); }
+      catch (error) {
+        launches = previous;
+        showToast('Não foi possível salvar a exclusão. Tente novamente.');
+        return;
+      }
+      render();
+      showToast('Lançamento excluído.');
+    }
+
+    document.getElementById('undoButton').addEventListener('click', async () => {
+      if (!launches.length) return;
+      if (remoteMode) {
+        try {
+          const result = await apiRequest('/api/orders/latest', { method: 'DELETE' });
+          launches = launches.filter(item => item.id !== result.deletedId);
+          render();
+          showToast('Último lançamento da equipe desfeito.');
+        } catch (error) {
+          showToast('Não foi possível desfazer: ' + error.message);
+        }
+        return;
+      }
+      const previous = launches[launches.length - 1];
+      launches.pop();
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(launches)); }
+      catch (error) {
+        launches.push(previous);
+        showToast('Não foi possível desfazer. Verifique o armazenamento do aparelho.');
+        return;
+      }
+      render();
+      showToast('Último lançamento desfeito.');
+    });
+
+    periodFilter.addEventListener('change', () => {
+      specificDate.classList.toggle('visible', periodFilter.value === 'date');
+      if (periodFilter.value === 'date' && !specificDate.value) specificDate.value = localDateKey(new Date());
+      render();
+    });
+    specificDate.addEventListener('change', render);
+    document.getElementById('printButton').addEventListener('click', () => window.print());
+    document.getElementById('pdfButton').addEventListener('click', () => {
+      showToast('Na impressão, escolha “Salvar como PDF”.');
+      window.setTimeout(() => window.print(), 250);
+    });
+
+    const qrVideo = document.getElementById('qrVideo');
+    const qrToggle = document.getElementById('qrToggle');
+    const qrStatus = document.getElementById('qrStatus');
+    const cameraWrap = document.getElementById('cameraWrap');
+
+    function setQrStatus(message) {
+      qrStatus.textContent = message;
+    }
+
+    function playScanFeedback() {
+      if (navigator.vibrate) navigator.vibrate(70);
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      try {
+        const context = new AudioContextClass();
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.frequency.value = 880;
+        gain.gain.setValueAtTime(0.12, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.12);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.12);
+        oscillator.onended = () => context.close();
+      } catch (error) {
+        // A leitura continua válida mesmo se o aparelho bloquear o som.
+      }
+    }
+
+    async function scanQrFrame() {
+      if (!qrActive || !qrDetector || qrVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+        if (qrActive) qrFrame = requestAnimationFrame(scanQrFrame);
+        return;
+      }
+      try {
+        const codes = await qrDetector.detect(qrVideo);
+        if (!qrActive) return;
+        const now = Date.now();
+        if (codes.length && codes[0].rawValue) {
+          const value = codes[0].rawValue;
+          if (value !== lastQrValue) {
+            lastQrValue = value;
+            lastQrDetectedAt = now;
+            const store = document.getElementById('qrStore').value;
+            if (await addLaunch(store, 1, 'qr')) {
+              playScanFeedback();
+              setQrStatus('Pedido bipado para ' + store + ' (+1). Afaste o QR da câmera para ler o próximo.');
+            } else {
+              setQrStatus('Não foi possível salvar este pedido. Verifique o armazenamento e tente novamente.');
+            }
+          } else {
+            lastQrDetectedAt = now;
+          }
+        } else if (lastQrValue && now - lastQrDetectedAt > 900) {
+          lastQrValue = '';
+        }
+        qrFrame = requestAnimationFrame(scanQrFrame);
+      } catch (error) {
+        stopQrScanner();
+        setQrStatus('Falha ao ler o QR Code. Feche e abra o leitor novamente; se persistir, atualize o Chrome.');
+        showToast('O leitor encontrou um erro ao analisar a imagem da câmera.');
+      }
+    }
+
+    async function startQrScanner() {
+      if (qrStarting) return;
+      if (!('BarcodeDetector' in window)) {
+        setQrStatus('Este navegador não oferece leitura QR integrada. Tente no Chrome atualizado para Android.');
+        showToast('Leitor QR indisponível neste navegador.');
+        return;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setQrStatus('A câmera exige contexto seguro. Abra esta página em HTTPS ou em localhost e permita o acesso à câmera.');
+        showToast('A câmera não está disponível neste endereço. Use HTTPS ou localhost.');
+        return;
+      }
+      qrStarting = true;
+      qrToggle.disabled = true;
+      setQrStatus('Preparando a câmera…');
+      try {
+        const formats = await window.BarcodeDetector.getSupportedFormats();
+        if (!formats.includes('qr_code')) {
+          setQrStatus('O navegador não oferece detecção de QR Code. Atualize o Chrome ou use os botões manuais.');
+          qrStarting = false;
+          qrToggle.disabled = false;
+          return;
+        }
+        qrDetector = new window.BarcodeDetector({ formats: ['qr_code'] });
+        qrStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: 'environment' } }
+        });
+        if (document.hidden) {
+          stopQrScanner();
+          setQrStatus('Leitor fechado porque o app saiu da tela. Toque em Abrir leitor QR para continuar.');
+          return;
+        }
+        qrVideo.srcObject = qrStream;
+        await qrVideo.play();
+        qrActive = true;
+        qrStarting = false;
+        lastQrValue = '';
+        cameraWrap.classList.add('visible');
+        qrToggle.classList.add('stop');
+        qrToggle.textContent = '■ Fechar leitor QR';
+        qrToggle.setAttribute('aria-pressed', 'true');
+        qrToggle.disabled = false;
+        document.getElementById('qrStore').disabled = true;
+        setQrStatus('Câmera ligada. Aponte para o QR do pedido; cada código será contado uma vez até ser afastado.');
+        qrFrame = requestAnimationFrame(scanQrFrame);
+      } catch (error) {
+        stopQrScanner();
+        if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
+          setQrStatus('Permissão da câmera recusada ou bloqueada. Autorize a câmera nas configurações do navegador e tente novamente.');
+        } else if (error.name === 'NotFoundError' || error.name === 'OverconstrainedError') {
+          setQrStatus('Não foi encontrada uma câmera compatível neste aparelho.');
+        } else if (error.name === 'NotReadableError') {
+          setQrStatus('A câmera está em uso por outro aplicativo. Feche-o e tente novamente.');
+        } else {
+          setQrStatus('Não foi possível abrir o leitor. Confira a permissão da câmera e use HTTPS ou localhost.');
+        }
+        showToast('Não foi possível iniciar a câmera. Confira a mensagem do leitor.');
+      }
+    }
+
+    function stopQrScanner() {
+      qrActive = false;
+      qrStarting = false;
+      if (qrFrame !== null) cancelAnimationFrame(qrFrame);
+      qrFrame = null;
+      if (qrStream) qrStream.getTracks().forEach(track => track.stop());
+      qrStream = null;
+      qrDetector = null;
+      qrVideo.pause();
+      qrVideo.srcObject = null;
+      cameraWrap.classList.remove('visible');
+      qrToggle.classList.remove('stop');
+      qrToggle.textContent = '▦ Abrir leitor QR';
+      qrToggle.setAttribute('aria-pressed', 'false');
+      qrToggle.disabled = false;
+      document.getElementById('qrStore').disabled = false;
+      lastQrValue = '';
+    }
+
+    qrToggle.addEventListener('click', () => {
+      if (qrActive) {
+        stopQrScanner();
+        setQrStatus('Leitor fechado. Escolha uma loja e abra a câmera para continuar.');
+      } else {
+        startQrScanner();
+      }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && qrActive) {
+        stopQrScanner();
+        setQrStatus('Leitor fechado porque o app saiu da tela. Toque em Abrir leitor QR para continuar.');
+      }
+    });
+
+    function normalize(text) {
+      return text.toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    const cardinalWords = {
+      zero: 0, um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9,
+      dez: 10, onze: 11, doze: 12, treze: 13, quatorze: 14, catorze: 14, quinze: 15, dezesseis: 16, dezessete: 17,
+      dezoito: 18, dezenove: 19, vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50, sessenta: 60, setenta: 70,
+      oitenta: 80, noventa: 90, cem: 100, cento: 100, duzentos: 200, trezentos: 300, quatrocentos: 400,
+      quinhentos: 500, seiscentos: 600, setecentos: 700, oitocentos: 800, novecentos: 900, mil: 1000
+    };
+
+    function parseNumberAt(tokens, start) {
+      if (/^\d+$/.test(tokens[start])) return { value: Number(tokens[start]), end: start + 1 };
+      let total = 0;
+      let current = 0;
+      let consumed = false;
+      let index = start;
+      while (index < tokens.length && index < start + 7) {
+        const token = tokens[index];
+        if (token === 'e' && consumed && index + 1 < tokens.length && Object.prototype.hasOwnProperty.call(cardinalWords, tokens[index + 1])) {
+          index++;
+          continue;
+        }
+        if (!Object.prototype.hasOwnProperty.call(cardinalWords, token)) break;
+        const value = cardinalWords[token];
+        consumed = true;
+        if (value >= 100) {
+          total += (current || 1) * value;
+          current = 0;
+        } else {
+          current += value;
+        }
+        index++;
+      }
+      return consumed ? { value: total + current, end: index } : null;
+    }
+
+    function parseUtterance(transcript) {
+      const normalized = normalize(transcript);
+      const stores = ['Mercado Livre', 'Shopee', 'Shein', 'Kwai', 'Tik Tok J&T', 'TikTok'];
+      let store = null;
+      for (const candidate of stores) {
+        const aliases = candidate === 'Tik Tok J&T'
+          ? ['tik tok j t', 'tiktok j t', 'tik tok j e t', 'tiktok j e t']
+          : [normalize(candidate)];
+        if (aliases.some(alias => (' ' + normalized + ' ').includes(' ' + alias + ' '))) {
+          store = candidate;
+          break;
+        }
+      }
+      if (!store) return { error: 'Não identifiquei a loja. Diga o nome de uma loja e tente novamente.' };
+      const tokens = normalized.split(' ');
+      let quantity = null;
+      let hadNumber = false;
+      for (let index = 0; index < tokens.length; index++) {
+        if (/^\d+$/.test(tokens[index]) || Object.prototype.hasOwnProperty.call(cardinalWords, tokens[index])) {
+          hadNumber = true;
+          const parsed = parseNumberAt(tokens, index);
+          if (parsed) { quantity = parsed.value; break; }
+        }
+      }
+      if (quantity === null && !hadNumber) quantity = 1;
+      if (quantity === null || !Number.isInteger(quantity) || quantity < 1 || quantity > 999) {
+        return { error: 'Não entendi uma quantidade válida (1 a 999). Fale a loja e a quantidade novamente.' };
+      }
+      return { store, quantity };
+    }
+
+    function setVoiceStatus(state, title, message) {
+      voiceTitle.textContent = title;
+      voiceStatus.textContent = message;
+      voiceIndicator.className = 'voice-indicator' + (state ? ' ' + state : '');
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('visible');
+      window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => toast.classList.remove('visible'), 3200);
+    }
+
+    function speak(message) {
+      if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.lang = 'pt-BR';
+      utterance.rate = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function stopRecognition() {
+      if (!recognition || !isListening) return;
+      isListening = false;
+      speakButton.setAttribute('aria-pressed', 'false');
+      speakButton.textContent = '🎙️ Falar';
+      try { recognition.stop(); } catch (error) { /* A captura pode já ter terminado. */ }
+    }
+
+    function startRecognition() {
+      if (!recognitionApi) {
+        setVoiceStatus('error', 'Comando de voz indisponível', 'Este navegador não oferece reconhecimento de voz. No iPhone/iPad o Safari pode não ser compatível; use Chrome no Android ou os botões manuais.');
+        showToast('Reconhecimento de voz não suportado. Você ainda pode lançar pedidos manualmente.');
+        return;
+      }
+      try {
+        recognition = new recognitionApi();
+        recognition.lang = 'pt-BR';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        recognition.onstart = () => {
+          isListening = true;
+          speakButton.setAttribute('aria-pressed', 'true');
+          speakButton.textContent = '■ Parar de ouvir';
+          setVoiceStatus('listening', 'Ouvindo…', 'Diga uma loja e a quantidade. Exemplo: “mais 2 Shein”.');
+        };
+        recognition.onresult = event => {
+          const result = event.results[event.resultIndex];
+          if (!result || !result.isFinal) return;
+          isListening = false;
+          speakButton.setAttribute('aria-pressed', 'false');
+          speakButton.textContent = '🎙️ Falar';
+          setVoiceStatus('processing', 'Processando fala…', 'Reconhecido: “' + result[0].transcript.trim() + '”');
+          const parsed = parseUtterance(result[0].transcript);
+          if (parsed.error) {
+            setVoiceStatus('error', 'Não foi registrado', parsed.error);
+            showToast(parsed.error);
+            return;
+          }
+          void addLaunch(parsed.store, parsed.quantity, 'voz');
+        };
+        recognition.onerror = event => {
+          isListening = false;
+          speakButton.setAttribute('aria-pressed', 'false');
+          speakButton.textContent = '🎙️ Falar';
+          let message = 'O microfone não pôde ser usado. Confira a permissão do navegador e tente novamente.';
+          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') message = 'Permissão de microfone recusada. Autorize o microfone nas configurações do navegador e tente novamente.';
+          else if (event.error === 'no-speech') message = 'Não ouvi uma fala. Toque em Falar e tente novamente.';
+          else if (event.error === 'audio-capture') message = 'Nenhum microfone disponível. Confira o aparelho ou use os botões manuais.';
+          else if (event.error === 'network') message = 'Falha de conexão do serviço de voz. Tente novamente ou use os botões manuais.';
+          setVoiceStatus('error', 'Erro de microfone / voz', message);
+          showToast(message);
+        };
+        recognition.onend = () => {
+          if (isListening) {
+            isListening = false;
+            speakButton.setAttribute('aria-pressed', 'false');
+            speakButton.textContent = '🎙️ Falar';
+            setVoiceStatus('', 'Pronto para anotar', 'Toque em Falar e tente novamente.');
+          }
+        };
+        recognition.start();
+      } catch (error) {
+        isListening = false;
+        speakButton.setAttribute('aria-pressed', 'false');
+        speakButton.textContent = '🎙️ Falar';
+        setVoiceStatus('error', 'Não foi possível iniciar o microfone', 'Confira a permissão do microfone e, se estiver no Safari/iOS, tente em um navegador compatível.');
+        showToast('Não foi possível iniciar o microfone.');
+      }
+    }
+
+    speakButton.addEventListener('click', () => {
+      if (isListening) {
+        stopRecognition();
+        setVoiceStatus('', 'Microfone pausado', 'Toque em Falar quando quiser registrar outro pedido.');
+      } else {
+        startRecognition();
+      }
+    });
+
+    render();
+    void initializeAccount();
+  </script>
+</body>
+</html>
